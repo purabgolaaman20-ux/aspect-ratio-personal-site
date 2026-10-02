@@ -423,6 +423,7 @@
         frame: 0,
         hideTimer: 0,
         nudgeTimer: 0,
+        touchStart: null,
         scrollY: window.scrollY
       };
 
@@ -515,6 +516,12 @@
 
       document.addEventListener('pointermove', event => {
         if (!event.isPrimary || !['mouse', 'pen', 'touch'].includes(event.pointerType)) return;
+        if (event.pointerType === 'touch' && window.matchMedia('(max-width: 480px)').matches) {
+          if (state.touchStart && Math.hypot(event.clientX - state.touchStart.x, event.clientY - state.touchStart.y) > 9) {
+            state.touchStart.moved = true;
+          }
+          return;
+        }
         setPointer(event.clientX, event.clientY, event.pointerType);
         if (event.pointerType === 'touch') {
           state.hideTimer = window.setTimeout(hideFollower, 1300);
@@ -523,15 +530,31 @@
 
       document.addEventListener('pointerdown', event => {
         if (!event.isPrimary || !['mouse', 'pen', 'touch'].includes(event.pointerType)) return;
+        if (event.pointerType === 'touch' && window.matchMedia('(max-width: 480px)').matches) {
+          hideFollower();
+          state.touchStart = { x: event.clientX, y: event.clientY, moved: false };
+          return;
+        }
         setPointer(event.clientX, event.clientY, event.pointerType);
       }, { passive: true });
 
       document.addEventListener('pointerup', event => {
         if (event.pointerType !== 'touch') return;
+        if (window.matchMedia('(max-width: 480px)').matches) {
+          const tap = state.touchStart;
+          state.touchStart = null;
+          if (!tap || tap.moved) return;
+          setPointer(tap.x, tap.y, 'touch');
+          state.hideTimer = window.setTimeout(hideFollower, 1100);
+          return;
+        }
         state.hideTimer = window.setTimeout(hideFollower, 1100);
       }, { passive: true });
       document.addEventListener('pointercancel', event => {
-        if (event.pointerType === 'touch') hideFollower();
+        if (event.pointerType === 'touch') {
+          state.touchStart = null;
+          hideFollower();
+        }
       }, { passive: true });
       window.addEventListener('wheel', event => {
         setPointer(event.clientX, event.clientY, 'mouse');
@@ -545,13 +568,12 @@
         const scrollY = window.scrollY;
         const direction = Math.sign(scrollY - state.scrollY);
         state.scrollY = scrollY;
-        if (!direction) return;
         if (window.matchMedia('(max-width: 480px)').matches) {
-          const scrollAnchor = { x: window.innerWidth * .88, y: window.innerHeight * .56 };
-          setPointer(scrollAnchor.x, scrollAnchor.y, 'scroll');
-          state.directionX = 1;
-          state.directionY = 0;
-        } else if (!state.active) {
+          hideFollower();
+          return;
+        }
+        if (!direction) return;
+        if (!state.active) {
           const anchor = state.lastPointer || { x: window.innerWidth / 2, y: window.innerHeight * .55 };
           setPointer(anchor.x, anchor.y, 'scroll');
         }
