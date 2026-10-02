@@ -145,13 +145,19 @@
     .mascot {
       position: absolute;
       z-index: 2;
+      display: block;
       width: 78px;
       height: 78px;
+      padding: 0;
+      border: 0;
       border-radius: 50%;
+      background: transparent;
       filter: drop-shadow(0 5px 16px rgb(0 0 0 / .38));
       animation: mascot-glitch 1.65s steps(1, end) infinite;
-      pointer-events: none;
+      cursor: pointer;
     }
+    .mascot img { display: block; width: 100%; height: 100%; border-radius: inherit; }
+    .mascot:focus-visible { outline: 2px solid var(--blue); outline-offset: 4px; }
     .mascot-intro { --tilt: 8deg; right: max(24px, calc((100vw - 640px) / 2 + 18px)); bottom: 12vh; width: 92px; height: 92px; }
     .mascot-account { --tilt: 5deg; position: relative; display: block; width: 72px; height: 72px; margin: 24px 0 0; animation-delay: -2.2s; }
     .profile-snapshot {
@@ -305,7 +311,9 @@
         <p class="tagline">Non-technical beginner. Posting the messy version.</p>
         <p class="cue">From color on a canvas to code on a screen ↓</p>
       </div>
-      <img class="mascot mascot-intro" src="sheep-mascot.png" alt="" aria-hidden="true">
+      <button class="mascot mascot-intro" type="button" aria-label="Play sheep sound">
+        <img src="sheep-mascot.png" alt="">
+      </button>
     </section>
 
     <section class="page project-page" id="studio" aria-labelledby="project-title">
@@ -338,7 +346,9 @@
           <li>Posting the messy version.</li>
           <li>Not starting five new ideas.</li>
         </ul>
-        <img class="mascot mascot-account" src="sheep-mascot.png" alt="" aria-hidden="true">
+        <button class="mascot mascot-account" type="button" aria-label="Play sheep sound">
+          <img src="sheep-mascot.png" alt="">
+        </button>
       </div>
     </section>
   </main>
@@ -372,7 +382,7 @@
         window.setTimeout(() => { intro.hidden = true; }, 580);
       }
 
-      document.querySelectorAll('.project-card .button, .account-link').forEach(link => {
+      document.querySelectorAll('.project-card .button, .account-link, .page-nav .nav-links a, .mascot').forEach(link => {
         link.addEventListener('click', playSheepSound);
       });
 
