@@ -110,22 +110,7 @@
       background: repeating-linear-gradient(to bottom, transparent 0 3px, rgb(235 230 255 / 30%) 4px, transparent 5px);
       animation: scan .95s steps(1, end) both;
     }
-    .skip {
-      position: absolute;
-      z-index: 4;
-      right: max(22px, calc((100vw - 640px) / 2));
-      bottom: 24px;
-      padding: 9px 13px;
-      border: 1px solid rgb(244 241 255 / .4);
-      border-radius: 999px;
-      background: rgb(9 11 29 / .55);
-      color: var(--paper);
-      font: 13px Arial, Helvetica, sans-serif;
-      cursor: pointer;
-      backdrop-filter: blur(8px);
-    }
-    .skip:hover, .skip:focus-visible { border-color: var(--blue); }
-    .skip:focus-visible, a:focus-visible { outline: 2px solid var(--blue); outline-offset: 4px; }
+    a:focus-visible { outline: 2px solid var(--blue); outline-offset: 4px; }
 
     main { opacity: 0; transform: translateY(12px); }
     main.is-visible { animation: page-in .65s ease both; }
@@ -306,10 +291,9 @@
     <span class="terminal" aria-hidden="true">&gt; learning_to_build_ &nbsp; 0x01 / TRY_AGAIN</span>
     <span class="glitch-field" aria-hidden="true"></span>
     <span class="scanlines" aria-hidden="true"></span>
-    <button class="skip" id="skip" type="button">skip</button>
   </div>
-  <audio id="sheep-sound" preload="none">
-    <source src="https://upload.wikimedia.org/wikipedia/commons/2/28/Sheep_bleat.ogg" type="audio/ogg">
+  <audio id="sheep-sound" preload="auto">
+    <source src="sheep-bleat.ogg" type="audio/ogg">
   </audio>
 
   <main id="page">
@@ -373,7 +357,6 @@
     (() => {
       const intro = document.getElementById('intro');
       const page = document.getElementById('page');
-      const skip = document.getElementById('skip');
       const sheepSound = document.getElementById('sheep-sound');
       let finished = false;
       let soundPlayed = false;
@@ -382,6 +365,7 @@
       function playSheepSound() {
         if (soundPlayed) return;
         sheepSound.currentTime = 0;
+        sheepSound.volume = 0.72;
         const playback = sheepSound.play();
         if (playback) playback.then(() => { soundPlayed = true; }).catch(() => {});
       }
@@ -396,7 +380,6 @@
         window.setTimeout(() => { intro.hidden = true; }, 580);
       }
 
-      skip.addEventListener('click', finish);
       document.addEventListener('pointerdown', () => { if (finished && !soundPlayed) playSheepSound(); }, { passive: true });
       document.addEventListener('keydown', () => { if (finished && !soundPlayed) playSheepSound(); });
       if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) finish();
