@@ -126,21 +126,6 @@
     }
     .skip:hover, .skip:focus-visible { border-color: var(--blue); }
     .skip:focus-visible, a:focus-visible { outline: 2px solid var(--blue); outline-offset: 4px; }
-    .sound-toggle {
-      position: fixed;
-      z-index: 8;
-      bottom: 24px;
-      left: max(22px, calc((100vw - 640px) / 2));
-      padding: 9px 13px;
-      border: 1px solid rgb(244 241 255 / .4);
-      border-radius: 999px;
-      background: rgb(9 11 29 / .72);
-      color: var(--paper);
-      font: 13px Arial, Helvetica, sans-serif;
-      cursor: pointer;
-      backdrop-filter: blur(8px);
-    }
-    .sound-toggle:hover, .sound-toggle:focus-visible { border-color: var(--blue); }
 
     main { opacity: 0; transform: translateY(12px); }
     main.is-visible { animation: page-in .65s ease both; }
@@ -323,7 +308,6 @@
     <span class="scanlines" aria-hidden="true"></span>
     <button class="skip" id="skip" type="button">skip</button>
   </div>
-  <button class="sound-toggle" id="sound-toggle" type="button" aria-pressed="false" aria-label="Turn sheep sound on">Sheep sound: off</button>
   <audio id="sheep-sound" preload="none">
     <source src="https://upload.wikimedia.org/wikipedia/commons/2/28/Sheep_bleat.ogg" type="audio/ogg">
   </audio>
@@ -390,16 +374,16 @@
       const intro = document.getElementById('intro');
       const page = document.getElementById('page');
       const skip = document.getElementById('skip');
-      const soundToggle = document.getElementById('sound-toggle');
       const sheepSound = document.getElementById('sheep-sound');
       let finished = false;
-      let soundEnabled = false;
+      let soundPlayed = false;
       let finishTimer;
 
       function playSheepSound() {
+        if (soundPlayed) return;
         sheepSound.currentTime = 0;
         const playback = sheepSound.play();
-        if (playback) playback.catch(() => {});
+        if (playback) playback.then(() => { soundPlayed = true; }).catch(() => {});
       }
 
       function finish() {
@@ -408,18 +392,13 @@
         window.clearTimeout(finishTimer);
         intro.classList.add('is-leaving');
         page.classList.add('is-visible');
-        if (soundEnabled) playSheepSound();
+        playSheepSound();
         window.setTimeout(() => { intro.hidden = true; }, 580);
       }
 
       skip.addEventListener('click', finish);
-      soundToggle.addEventListener('click', () => {
-        soundEnabled = !soundEnabled;
-        soundToggle.setAttribute('aria-pressed', String(soundEnabled));
-        soundToggle.setAttribute('aria-label', `${soundEnabled ? 'Turn sheep sound off' : 'Turn sheep sound on'}`);
-        soundToggle.textContent = `Sheep sound: ${soundEnabled ? 'on' : 'off'}`;
-        if (soundEnabled && finished) playSheepSound();
-      });
+      document.addEventListener('pointerdown', () => { if (finished && !soundPlayed) playSheepSound(); }, { passive: true });
+      document.addEventListener('keydown', () => { if (finished && !soundPlayed) playSheepSound(); });
       if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) finish();
       else finishTimer = window.setTimeout(finish, 2850);
     })();
@@ -567,7 +546,12 @@
         const direction = Math.sign(scrollY - state.scrollY);
         state.scrollY = scrollY;
         if (!direction) return;
-        if (!state.active) {
+        if (window.matchMedia('(max-width: 480px)').matches) {
+          const scrollAnchor = { x: window.innerWidth * .88, y: window.innerHeight * .56 };
+          setPointer(scrollAnchor.x, scrollAnchor.y, 'scroll');
+          state.directionX = 1;
+          state.directionY = 0;
+        } else if (!state.active) {
           const anchor = state.lastPointer || { x: window.innerWidth / 2, y: window.innerHeight * .55 };
           setPointer(anchor.x, anchor.y, 'scroll');
         }
