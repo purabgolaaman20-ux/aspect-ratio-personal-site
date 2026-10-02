@@ -372,6 +372,10 @@
         window.setTimeout(() => { intro.hidden = true; }, 580);
       }
 
+      document.querySelectorAll('.project-card .button, .account-link').forEach(link => {
+        link.addEventListener('click', playSheepSound);
+      });
+
       if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) finish();
       else finishTimer = window.setTimeout(finish, 2850);
     })();
