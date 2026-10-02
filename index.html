@@ -1,0 +1,553 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#090b1d">
+  <meta name="description" content="Aspect Ratio — a non-technical beginner learning to build.">
+  <title>Aspect Ratio</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --night: #090b1d;
+      --paper: #f4f1ff;
+      --muted: #aaa9c2;
+      --orange: #ff9b35;
+      --violet: #a36aff;
+      --blue: #55d8ff;
+      font-family: Arial, Helvetica, sans-serif;
+      background: var(--night);
+      color: var(--paper);
+      font-synthesis: none;
+      text-rendering: optimizeLegibility;
+    }
+    * { box-sizing: border-box; }
+    html { min-height: 100%; scroll-behavior: smooth; background: var(--night); }
+    body { min-height: 100vh; margin: 0; background: var(--night); }
+    a { color: inherit; }
+    body.custom-cursor, body.custom-cursor * { cursor: none !important; }
+    .sheep-follower, .grass-cursor { position: fixed; z-index: 30; pointer-events: none; opacity: 0; }
+    .sheep-follower { top: 0; left: 0; width: 126px; height: 90px; transform: translate3d(var(--sheep-x, -180px), var(--sheep-y, -180px), 0) translate(-50%, -50%) scaleX(var(--facing, -1)) rotate(var(--sheep-tilt, 0deg)); transform-origin: 50% 50%; will-change: transform; transition: opacity .15s ease; }
+    .sheep-follower.is-visible, .grass-cursor.is-visible { opacity: 1; }
+    .sheep-follower img { display: block; width: 100%; height: 100%; object-fit: contain; }
+    .grass-cursor { z-index: 31; width: 58px; height: 58px; transform: translate(-50%, -82%); transition: opacity .12s ease; filter: drop-shadow(0 3px 5px rgb(80 230 125 / .24)); }
+    .grass-cursor img { display: block; width: 100%; height: 100%; object-fit: contain; }
+
+    /* The opening turns a painted night landscape into a brief screen glitch. */
+    .intro {
+      position: fixed;
+      z-index: 5;
+      inset: 0;
+      display: grid;
+      place-items: center;
+      overflow: hidden;
+      isolation: isolate;
+      background: radial-gradient(ellipse at 78% 24%, rgb(117 70 192 / .19), transparent 35%), radial-gradient(ellipse at 19% 82%, rgb(34 151 220 / .11), transparent 32%), var(--night);
+      transition: opacity .55s ease;
+    }
+    .night-layer { position: absolute; z-index: -2; inset: 0; display: grid; place-items: center; overflow: hidden; background: #071943; animation: night-exit 2.85s steps(1, end) both; }
+    .night-layer::before { content: ""; position: absolute; inset: -5%; background: url("starry-night.png") center / cover no-repeat; filter: blur(20px) brightness(.42) saturate(1.15); transform: scale(1.06); }
+    .night-layer img { position: relative; width: 100%; height: 100%; object-fit: contain; filter: drop-shadow(0 0 24px rgb(5 15 54 / .45)); }
+    .intro::before, .intro::after { content: ""; position: absolute; z-index: -1; inset: -15%; pointer-events: none; }
+    .intro::before {
+      background: radial-gradient(ellipse at 78% 24%, rgb(117 70 192 / .24), transparent 35%), radial-gradient(ellipse at 19% 82%, rgb(34 151 220 / .17), transparent 32%);
+      opacity: 0;
+      animation: tech-arrive 2.85s ease both;
+    }
+    .intro::after {
+      opacity: 0;
+      background: repeating-linear-gradient(0deg, transparent 0 6px, rgb(85 216 255 / .18) 7px 8px, transparent 9px 15px), linear-gradient(115deg, transparent 25%, rgb(163 106 255 / .13) 48%, rgb(85 216 255 / .2) 50%, transparent 72%);
+      animation: screen-wash 2.6s steps(2, end) both;
+    }
+    .intro.is-leaving { opacity: 0; pointer-events: none; }
+    .intro[hidden] { display: none; }
+    .opening {
+      position: relative;
+      z-index: 2;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: clamp(20px, 4.6vh, 42px);
+      width: min(100% - 38px, 920px);
+      margin: 0;
+      font: 400 clamp(2.2rem, 8.7vw, 6rem)/1.08 Georgia, 'Times New Roman', serif;
+      letter-spacing: -.045em;
+      text-align: center;
+      text-wrap: balance;
+    }
+    .opening-line { display: block; max-width: 100%; }
+    .paint-line { color: #fff7d3; animation: paint-text 1.45s steps(1, end) both; }
+    .build-line { color: #f4f1ff; opacity: 0; animation: resolve .58s ease 1.48s both; }
+    .terminal {
+      position: absolute;
+      z-index: 2;
+      top: 74%;
+      left: 50%;
+      color: #99ffc5;
+      font: 12px/1.6 ui-monospace, SFMono-Regular, Menlo, monospace;
+      letter-spacing: .06em;
+      white-space: nowrap;
+      opacity: 0;
+      transform: translateX(-50%);
+      animation: terminal .95s steps(2, end) 1.15s both;
+    }
+    .glitch-field {
+      position: absolute;
+      z-index: 1;
+      inset: -5%;
+      pointer-events: none;
+      opacity: 0;
+      background: repeating-linear-gradient(0deg, transparent 0 41px, rgb(85 216 255 / .4) 42px 52px, transparent 53px 79px), linear-gradient(90deg, transparent 0 12%, rgb(255 116 45 / .38) 12% 23%, transparent 23% 39%, rgb(163 106 255 / .45) 39% 51%, transparent 51% 68%, rgb(85 216 255 / .38) 68% 79%, transparent 79%);
+      clip-path: polygon(0 8%, 29% 8%, 29% 20%, 61% 20%, 61% 5%, 100% 5%, 100% 39%, 78% 39%, 78% 57%, 100% 57%, 100% 91%, 53% 91%, 53% 78%, 25% 78%, 25% 100%, 0 100%);
+      animation: field-glitch .92s steps(2, end) 1.08s both;
+    }
+    .scanlines {
+      position: absolute;
+      z-index: 3;
+      inset: 0;
+      pointer-events: none;
+      opacity: .22;
+      background: repeating-linear-gradient(to bottom, transparent 0 3px, rgb(235 230 255 / 30%) 4px, transparent 5px);
+      animation: scan .95s steps(1, end) both;
+    }
+    .skip {
+      position: absolute;
+      z-index: 4;
+      right: max(22px, calc((100vw - 640px) / 2));
+      bottom: 24px;
+      padding: 9px 13px;
+      border: 1px solid rgb(244 241 255 / .4);
+      border-radius: 999px;
+      background: rgb(9 11 29 / .55);
+      color: var(--paper);
+      font: 13px Arial, Helvetica, sans-serif;
+      cursor: pointer;
+      backdrop-filter: blur(8px);
+    }
+    .skip:hover, .skip:focus-visible { border-color: var(--blue); }
+    .skip:focus-visible, a:focus-visible { outline: 2px solid var(--blue); outline-offset: 4px; }
+
+    main { opacity: 0; transform: translateY(12px); }
+    main.is-visible { animation: page-in .65s ease both; }
+    .page {
+      position: relative;
+      display: flex;
+      min-height: 100svh;
+      flex-direction: column;
+      justify-content: center;
+      overflow: hidden;
+      padding: 104px max(24px, calc((100vw - 640px) / 2)) 76px;
+      isolation: isolate;
+      border-bottom: 1px solid rgb(215 209 255 / .1);
+    }
+    .page::before, .page::after { content: ""; position: absolute; z-index: -1; pointer-events: none; }
+    .page::before {
+      inset: 0;
+      opacity: .72;
+      background: radial-gradient(ellipse at 78% 24%, rgb(117 70 192 / .19), transparent 35%), radial-gradient(ellipse at 19% 82%, rgb(34 151 220 / .11), transparent 32%);
+    }
+    .page::after {
+      right: 0;
+      bottom: 0;
+      left: 0;
+      width: 100%;
+      height: clamp(112px, 17vh, 168px);
+      opacity: .4;
+      background: linear-gradient(to top, rgb(9 11 29 / .08), transparent 78%), url("grassland.svg") center bottom / 100% 100% no-repeat;
+      filter: none;
+      mask-image: linear-gradient(to top, #000 34%, transparent 100%);
+      transform: none;
+    }
+    .page-inner { width: min(100%, 640px); margin: auto; }
+    .mascot {
+      position: absolute;
+      z-index: 2;
+      width: 78px;
+      height: 78px;
+      border-radius: 50%;
+      filter: drop-shadow(0 5px 16px rgb(0 0 0 / .38));
+      animation: mascot-glitch 1.65s steps(1, end) infinite;
+      pointer-events: none;
+    }
+    .mascot-intro { --tilt: 8deg; right: max(24px, calc((100vw - 640px) / 2 + 18px)); bottom: 12vh; width: 92px; height: 92px; }
+    .mascot-account { --tilt: 5deg; position: relative; display: block; width: 72px; height: 72px; margin: 24px 0 0; animation-delay: -2.2s; }
+    .profile-snapshot {
+      position: relative;
+      z-index: 2;
+      width: clamp(224px, 48vw, 380px);
+      aspect-ratio: 1242 / 714;
+      margin: 0 0 28px auto;
+      overflow: hidden;
+      border: 1px solid rgb(85 216 255 / .38);
+      border-radius: 10px;
+      background: #05080d;
+      box-shadow: 0 12px 36px rgb(0 0 0 / .4), 0 0 24px rgb(85 216 255 / .12);
+      isolation: isolate;
+    }
+    .profile-snapshot::after { content: ""; position: absolute; inset: 0; z-index: 1; pointer-events: none; opacity: 0; background: url("x-account-screenshot.webp") center / 100% 100% no-repeat; mix-blend-mode: screen; filter: drop-shadow(-4px 0 #ff43a3) drop-shadow(4px 0 #48e9ff); animation: snapshot-echo 1.8s steps(1, end) infinite; }
+    .profile-snapshot img { display: block; width: 100%; height: auto; object-fit: cover; animation: snapshot-glitch 1.8s steps(1, end) infinite; }
+    .page-nav {
+      position: absolute;
+      top: 30px;
+      left: 50%;
+      display: flex;
+      width: min(100% - 40px, 640px);
+      justify-content: space-between;
+      align-items: center;
+      transform: translateX(-50%);
+    }
+    .wordmark { color: var(--paper); font: 15px Georgia, 'Times New Roman', serif; text-decoration: none; }
+    .nav-links { display: flex; gap: clamp(12px, 4vw, 28px); }
+    .nav-links a { color: var(--muted); font-size: 12px; text-decoration: none; }
+    .nav-links a:hover { color: var(--blue); }
+    .eyebrow, .page-number { margin: 0 0 22px; color: var(--blue); font: 11px/1.5 ui-monospace, SFMono-Regular, Menlo, monospace; letter-spacing: .13em; text-transform: uppercase; }
+    h1 { max-width: 8ch; margin: 0; font: 400 clamp(3.5rem, 13vw, 6.5rem)/.98 Georgia, 'Times New Roman', serif; letter-spacing: -.06em; text-shadow: 0 0 46px rgb(255 126 57 / .2); }
+    .tagline { max-width: 36ch; margin: 24px 0 0; color: var(--muted); font-size: 16px; line-height: 1.75; }
+    .cue { margin-top: 58px; color: #777994; font: 11px ui-monospace, SFMono-Regular, Menlo, monospace; letter-spacing: .1em; text-transform: uppercase; }
+    .project-page::before { background: radial-gradient(ellipse at 70% 45%, rgb(72 106 214 / .2), transparent 40%), radial-gradient(ellipse at 14% 24%, rgb(255 135 54 / .1), transparent 28%); }
+    .account-page::before { background: radial-gradient(ellipse at 71% 39%, rgb(255 119 50 / .13), transparent 34%), radial-gradient(ellipse at 22% 78%, rgb(132 87 225 / .2), transparent 38%); }
+    .project-card {
+      position: relative;
+      padding: clamp(25px, 7vw, 46px);
+      border: 1px solid rgb(181 174 255 / .26);
+      background: linear-gradient(145deg, rgb(255 255 255 / .07), rgb(255 255 255 / .018) 48%, rgb(67 155 255 / .07));
+      box-shadow: 0 20px 90px rgb(0 0 0 / .24), inset 0 1px rgb(255 255 255 / .07);
+      backdrop-filter: blur(8px);
+    }
+    .project-card::before { content: ""; position: absolute; top: -1px; left: 26px; width: 80px; height: 2px; background: linear-gradient(90deg, var(--orange), var(--violet), var(--blue)); box-shadow: 0 0 17px rgb(85 216 255 / .65); }
+    h2 { margin: 0 0 16px; font-size: clamp(1.45rem, 5vw, 2rem); font-weight: 500; letter-spacing: -.035em; }
+    .project-card p, .account-copy { max-width: 42ch; margin: 0 0 25px; color: var(--muted); font-size: 15px; line-height: 1.8; }
+    .studio-collage { --tilt: 0deg; display: block; width: 100%; height: auto; margin-top: 28px; border: 1px solid rgb(85 216 255 / .2); border-radius: 9px; box-shadow: 0 18px 54px rgb(0 0 0 / .3); animation: mascot-glitch 1.65s steps(1, end) infinite; }
+    .button, .account-link {
+      display: inline-flex;
+      min-height: 45px;
+      align-items: center;
+      padding: 0 17px;
+      border: 1px solid rgb(85 216 255 / .62);
+      color: var(--paper);
+      font-size: 13px;
+      text-decoration: none;
+      transition: background .18s ease, box-shadow .18s ease, border-color .18s ease;
+    }
+    .button:hover, .account-link:hover { border-color: var(--blue); background: rgb(85 216 255 / .1); box-shadow: 0 0 26px rgb(85 216 255 / .14); }
+    .account-copy { margin-top: 22px; }
+    .account-handle { display: block; margin: 0 0 28px; color: var(--orange); font: 13px ui-monospace, SFMono-Regular, Menlo, monospace; }
+    .focus-list { display: grid; gap: 11px; margin: 34px 0 0; padding: 24px 0 0; border-top: 1px solid rgb(215 209 255 / .14); list-style: none; }
+    .focus-list li { color: var(--muted); font-size: 13px; line-height: 1.6; }
+    .focus-list li::before { content: "//"; margin-right: 12px; color: var(--violet); font: 12px ui-monospace, SFMono-Regular, Menlo, monospace; }
+    @keyframes mascot-glitch {
+      0%, 40%, 100% { transform: translate(0) rotate(var(--tilt)); clip-path: inset(0); filter: drop-shadow(0 5px 16px rgb(0 0 0 / .38)); }
+      44% { transform: translate(5px, -2px) rotate(calc(var(--tilt) + 2deg)); clip-path: inset(0 0 58%); filter: drop-shadow(-4px 0 #ff7e39) drop-shadow(4px 0 #55d8ff); }
+      47% { transform: translate(-6px, 1px) rotate(calc(var(--tilt) - 2deg)); clip-path: inset(48% 0 20%); filter: drop-shadow(4px 0 #a36aff) drop-shadow(-4px 0 #55d8ff); }
+      50% { transform: translate(4px, 0) rotate(var(--tilt)); clip-path: inset(18% 0 49%); filter: drop-shadow(-3px 0 #ff43a3) drop-shadow(3px 0 #48e9ff); }
+      54% { transform: translate(-2px, 0) rotate(var(--tilt)); clip-path: inset(0); filter: drop-shadow(-3px 0 #ff43a3) drop-shadow(3px 0 #48e9ff); }
+      59% { transform: translate(0) rotate(var(--tilt)); clip-path: inset(0); filter: drop-shadow(0 5px 16px rgb(0 0 0 / .38)); }
+    }
+    @keyframes snapshot-glitch {
+      0%, 36%, 100% { transform: translateX(0); filter: none; }
+      40% { transform: translateX(-5px); filter: hue-rotate(24deg) saturate(1.25); }
+      44% { transform: translateX(6px); filter: hue-rotate(-20deg) contrast(1.16); }
+      48% { transform: translateX(-3px); filter: hue-rotate(12deg) saturate(1.2); }
+      53% { transform: translateX(0); filter: none; }
+    }
+    @keyframes snapshot-echo {
+      0%, 38%, 100% { opacity: 0; transform: translate(0); clip-path: inset(0); }
+      41% { opacity: .78; transform: translate(-7px, 1px); clip-path: inset(8% 0 60%); }
+      44% { opacity: .72; transform: translate(6px, -1px); clip-path: inset(47% 0 17%); }
+      47% { opacity: .55; transform: translate(-3px, 0); clip-path: inset(24% 0 43%); }
+      51% { opacity: 0; transform: translate(0); clip-path: inset(0); }
+    }
+    @keyframes tech-arrive { 0%, 34% { opacity: 0; } 51% { opacity: .72; } 100% { opacity: 1; } }
+    @keyframes night-exit { 0%, 34% { opacity: 1; clip-path: inset(0); filter: none; } 38% { opacity: .94; clip-path: inset(8% 0 72%); filter: hue-rotate(22deg) contrast(1.12); } 42% { opacity: .72; clip-path: inset(39% 0 22%); filter: hue-rotate(-25deg) contrast(1.08); } 46% { opacity: .32; clip-path: inset(0); filter: saturate(1.4); } 51%, 100% { opacity: 0; clip-path: inset(0); filter: none; } }
+    @keyframes screen-wash { 0%, 10%, 100% { opacity: 0; } 18%, 25%, 42%, 49%, 68%, 75%, 92% { opacity: .8; } }
+    @keyframes paint-text {
+      0%, 10%, 19%, 29%, 40%, 50%, 61%, 73%, 84%, 92% { opacity: 1; transform: none; text-shadow: 0 0 28px rgb(255 215 78 / .38); }
+      11% { opacity: .48; transform: translateX(-9px) skewX(-2deg); text-shadow: 9px 0 #ff6d35, -7px 0 #a36aff; }
+      20% { opacity: 1; transform: translateX(8px); text-shadow: -11px 0 #ff6d35, 8px 0 #55d8ff; }
+      30% { opacity: .63; transform: translateX(-5px); text-shadow: 13px 0 #a36aff, -10px 0 #ff8e35; }
+      41% { opacity: 1; transform: translateX(6px) skewX(1deg); text-shadow: -12px 0 #55d8ff, 10px 0 #ff6d35; }
+      51% { opacity: .42; transform: translateX(-11px); text-shadow: 12px 0 #ff6d35, -8px 0 #a36aff; }
+      62% { opacity: 1; transform: translateX(4px); text-shadow: -8px 0 #55d8ff, 7px 0 #ff8e35; }
+      74% { opacity: .68; transform: translateX(-5px); text-shadow: 11px 0 #a36aff, -12px 0 #ff6d35; }
+      85% { opacity: 1; transform: translateX(2px); text-shadow: -8px 0 #55d8ff, 8px 0 #ff8e35; }
+      100% { opacity: 0; transform: translateX(-4px); }
+    }
+    @keyframes resolve { to { opacity: 1; } }
+    @keyframes terminal { 0%, 100% { opacity: 0; } 15%, 72% { opacity: 1; } }
+    @keyframes field-glitch { 0%, 100% { opacity: 0; transform: translateX(0); } 16%, 62% { opacity: .9; transform: translateX(22px); } 30% { transform: translateX(-27px); } 47% { opacity: .55; transform: translateX(34px); } }
+    @keyframes scan { 0%, 100% { opacity: .14; } 24%, 56%, 78% { opacity: .52; } }
+    @keyframes page-in { to { opacity: 1; transform: none; } }
+    @media (max-width: 480px) {
+      .sheep-follower { width: 106px; height: 74px; }
+      .grass-cursor { width: 52px; height: 52px; }
+      .page { padding-top: 94px; padding-bottom: 60px; }
+      .page-nav { top: 24px; }
+      .wordmark { font-size: 13px; }
+      .nav-links { gap: 12px; }
+      .nav-links a { font-size: 11px; }
+      .cue { margin-top: 40px; }
+      .mascot-intro { right: 18px; bottom: 8vh; width: 70px; height: 70px; }
+      .mascot-account { width: 58px; height: 58px; margin-top: 18px; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { scroll-behavior: auto !important; animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
+    }
+  </style>
+</head>
+<body>
+  <div class="intro" id="intro" aria-label="I used to paint. Now I am learning to build.">
+    <div class="night-layer" aria-hidden="true">
+      <img src="starry-night.png" alt="" fetchpriority="high">
+    </div>
+    <p class="opening" aria-hidden="true">
+      <span class="opening-line paint-line">I used to paint.</span>
+      <span class="opening-line build-line">Now I am learning to build.</span>
+    </p>
+    <span class="terminal" aria-hidden="true">&gt; learning_to_build_ &nbsp; 0x01 / TRY_AGAIN</span>
+    <span class="glitch-field" aria-hidden="true"></span>
+    <span class="scanlines" aria-hidden="true"></span>
+    <button class="skip" id="skip" type="button">skip</button>
+  </div>
+
+  <main id="page">
+    <section class="page intro-page" id="intro-page" aria-labelledby="site-title">
+      <nav class="page-nav" aria-label="Page navigation">
+        <a class="wordmark" href="#intro-page">Aspect Ratio</a>
+        <div class="nav-links"><a href="#studio">Studio</a><a href="#account">X account</a></div>
+      </nav>
+      <div class="page-inner">
+        <p class="eyebrow">01 / A work in progress</p>
+        <h1 id="site-title">Aspect Ratio</h1>
+        <p class="tagline">Non-technical beginner. Posting the messy version.</p>
+        <p class="cue">From color on a canvas to code on a screen ↓</p>
+      </div>
+      <img class="mascot mascot-intro" src="sheep-mascot.png" alt="" aria-hidden="true">
+    </section>
+
+    <section class="page project-page" id="studio" aria-labelledby="project-title">
+      <div class="page-nav"><span class="wordmark">Aspect Ratio</span></div>
+      <div class="page-inner">
+        <p class="page-number">02 / Current project</p>
+        <div class="project-card">
+          <h2 id="project-title">X Banners Studio</h2>
+          <p>Free headers. Made by a beginner who kept poking it until it looked like a product.</p>
+          <a class="button" href="https://x-banners.vercel.app" target="_blank" rel="noopener noreferrer">Open it</a>
+          <img class="studio-collage" src="studio-collage.jpg" alt="Collage of six X Banners Studio headers in minimalist, lo-fi, cyberpunk, and tech styles" loading="lazy" decoding="async">
+        </div>
+        <p class="cue">One thing at a time ↓</p>
+      </div>
+    </section>
+
+    <section class="page account-page" id="account" aria-labelledby="account-title">
+      <div class="page-nav"><span class="wordmark">Aspect Ratio</span></div>
+      <div class="page-inner">
+        <figure class="profile-snapshot" aria-label="A small snapshot of my X profile">
+          <img src="x-account-screenshot.webp" alt="Aspect Ratio X profile screenshot" width="1242" height="714" loading="eager" decoding="async" fetchpriority="high">
+        </figure>
+        <p class="page-number">03 / In public</p>
+        <h2 id="account-title">Learning out loud.</h2>
+        <p class="account-copy">The experiments, the fixes, and the messy version as it comes together.</p>
+        <span class="account-handle">@20aspectratio</span>
+        <a class="account-link" href="https://x.com/20aspectratio" target="_blank" rel="noopener noreferrer">Visit my X account</a>
+        <ul class="focus-list" aria-label="Current focus">
+          <li>Fixing the banner site.</li>
+          <li>Posting the messy version.</li>
+          <li>Not starting five new ideas.</li>
+        </ul>
+        <img class="mascot mascot-account" src="sheep-mascot.png" alt="" aria-hidden="true">
+      </div>
+    </section>
+  </main>
+
+  <div class="sheep-follower" id="sheep-follower" aria-hidden="true">
+    <img src="cursor-sheep-cutout.png" alt="">
+  </div>
+  <div class="grass-cursor" id="grass-cursor" aria-hidden="true">
+    <img src="cursor-grass-cutout.png" alt="">
+  </div>
+
+  <script>
+    (() => {
+      const intro = document.getElementById('intro');
+      const page = document.getElementById('page');
+      const skip = document.getElementById('skip');
+      let finished = false;
+      let finishTimer;
+
+      function finish() {
+        if (finished) return;
+        finished = true;
+        window.clearTimeout(finishTimer);
+        intro.classList.add('is-leaving');
+        page.classList.add('is-visible');
+        window.setTimeout(() => { intro.hidden = true; }, 580);
+      }
+
+      skip.addEventListener('click', finish);
+      if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) finish();
+      else finishTimer = window.setTimeout(finish, 2850);
+    })();
+
+    (() => {
+      const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+      const intro = document.getElementById('intro');
+      const sheep = document.getElementById('sheep-follower');
+      const grass = document.getElementById('grass-cursor');
+      const state = {
+        active: false,
+        source: '',
+        pointer: null,
+        lastPointer: null,
+        x: 0,
+        y: 0,
+        directionX: 1,
+        directionY: 0,
+        scrollNudge: 0,
+        lastFrame: 0,
+        frame: 0,
+        hideTimer: 0,
+        nudgeTimer: 0,
+        scrollY: window.scrollY
+      };
+
+      function desiredPosition() {
+        const mobile = window.matchMedia('(max-width: 480px)').matches;
+        const halfWidth = (mobile ? 106 : 126) / 2 + 8;
+        const halfHeight = (mobile ? 74 : 90) / 2 + 8;
+        return {
+          x: Math.max(halfWidth, Math.min(window.innerWidth - halfWidth, state.pointer.x - state.directionX * (mobile ? 52 : 68))),
+          y: Math.max(halfHeight, Math.min(window.innerHeight - halfHeight, state.pointer.y - state.directionY * (mobile ? 25 : 32) + 8 + state.scrollNudge))
+        };
+      }
+
+      function scheduleFrame() {
+        if (!state.frame) state.frame = window.requestAnimationFrame(moveSheep);
+      }
+
+      function moveSheep(timestamp) {
+        state.frame = 0;
+        if (!state.active || !state.pointer) return;
+        const target = desiredPosition();
+        const elapsed = state.lastFrame ? Math.min(50, timestamp - state.lastFrame) : 16;
+        state.lastFrame = timestamp;
+        const ease = reducedMotion ? 1 : 1 - Math.exp(-elapsed / 90);
+        state.x += (target.x - state.x) * ease;
+        state.y += (target.y - state.y) * ease;
+        state.scrollNudge = reducedMotion ? 0 : state.scrollNudge * Math.exp(-elapsed / 190);
+        sheep.style.setProperty('--sheep-x', `${state.x}px`);
+        sheep.style.setProperty('--sheep-y', `${state.y}px`);
+        const dx = state.pointer.x - state.x;
+        const dy = state.pointer.y - state.y;
+        const facing = dx >= 0 ? -1 : 1;
+        const tilt = `${Math.max(-10, Math.min(10, dy / (Math.hypot(dx, dy) || 1) * 12))}deg`;
+        sheep.style.setProperty('--facing', facing);
+        sheep.style.setProperty('--sheep-tilt', tilt);
+        if (Math.abs(target.x - state.x) > .25 || Math.abs(target.y - state.y) > .25 || Math.abs(state.scrollNudge) > .25) scheduleFrame();
+      }
+
+      function hideFollower() {
+        state.active = false;
+        state.source = '';
+        state.pointer = null;
+        state.lastPointer = null;
+        state.directionX = 1;
+        state.directionY = 0;
+        state.scrollNudge = 0;
+        state.lastFrame = 0;
+        window.clearTimeout(state.hideTimer);
+        window.clearTimeout(state.nudgeTimer);
+        if (state.frame) window.cancelAnimationFrame(state.frame);
+        state.frame = 0;
+        sheep.classList.remove('is-visible');
+        grass.classList.remove('is-visible');
+        document.body.classList.remove('custom-cursor');
+      }
+
+      function setPointer(x, y, source) {
+        if (!intro.hidden) return;
+        window.clearTimeout(state.hideTimer);
+        const firstAppearance = !state.active;
+        if (state.pointer) {
+          const dx = x - state.pointer.x;
+          const dy = y - state.pointer.y;
+          const distance = Math.hypot(dx, dy);
+          if (distance > 2) {
+            const blend = distance > 18 ? .4 : .18;
+            state.directionX = state.directionX * (1 - blend) + (dx / distance) * blend;
+            state.directionY = state.directionY * (1 - blend) + (dy / distance) * blend;
+            const length = Math.hypot(state.directionX, state.directionY) || 1;
+            state.directionX /= length;
+            state.directionY /= length;
+          }
+        }
+        state.pointer = { x, y };
+        state.lastPointer = { x, y };
+        state.source = source;
+        state.active = true;
+        if (firstAppearance) {
+          const target = desiredPosition();
+          state.x = target.x;
+          state.y = target.y;
+        }
+        sheep.classList.add('is-visible');
+        grass.classList.add('is-visible');
+        document.body.classList.toggle('custom-cursor', source === 'mouse');
+        grass.style.left = `${x}px`;
+        grass.style.top = `${y}px`;
+        scheduleFrame();
+      }
+
+      document.addEventListener('pointermove', event => {
+        if (!event.isPrimary || !['mouse', 'pen', 'touch'].includes(event.pointerType)) return;
+        setPointer(event.clientX, event.clientY, event.pointerType);
+        if (event.pointerType === 'touch') {
+          state.hideTimer = window.setTimeout(hideFollower, 1300);
+        }
+      }, { passive: true });
+
+      document.addEventListener('pointerdown', event => {
+        if (!event.isPrimary || !['mouse', 'pen', 'touch'].includes(event.pointerType)) return;
+        setPointer(event.clientX, event.clientY, event.pointerType);
+      }, { passive: true });
+
+      document.addEventListener('pointerup', event => {
+        if (event.pointerType !== 'touch') return;
+        state.hideTimer = window.setTimeout(hideFollower, 1100);
+      }, { passive: true });
+      document.addEventListener('pointercancel', event => {
+        if (event.pointerType === 'touch') hideFollower();
+      }, { passive: true });
+      window.addEventListener('wheel', event => {
+        setPointer(event.clientX, event.clientY, 'mouse');
+      }, { passive: true });
+      document.addEventListener('pointerleave', event => {
+        if (event.pointerType === 'mouse' || event.pointerType === 'pen') hideFollower();
+      }, { passive: true });
+      window.addEventListener('blur', hideFollower);
+
+      window.addEventListener('scroll', () => {
+        const scrollY = window.scrollY;
+        const direction = Math.sign(scrollY - state.scrollY);
+        state.scrollY = scrollY;
+        if (!direction) return;
+        if (!state.active) {
+          const anchor = state.lastPointer || { x: window.innerWidth / 2, y: window.innerHeight * .55 };
+          setPointer(anchor.x, anchor.y, 'scroll');
+        }
+        state.scrollNudge = Math.max(-24, Math.min(24, state.scrollNudge - direction * 19));
+        scheduleFrame();
+        if (state.source !== 'mouse' && state.source !== 'pen') {
+          window.clearTimeout(state.hideTimer);
+          state.hideTimer = window.setTimeout(hideFollower, 1100);
+        }
+        window.clearTimeout(state.nudgeTimer);
+        state.nudgeTimer = window.setTimeout(() => {
+          state.scrollNudge = 0;
+          scheduleFrame();
+        }, 180);
+      }, { passive: true });
+    })();
+  </script>
+</body>
+</html>
