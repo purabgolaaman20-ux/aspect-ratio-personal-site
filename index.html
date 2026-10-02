@@ -26,10 +26,8 @@
     body { min-height: 100vh; margin: 0; background: var(--night); }
     a { color: inherit; }
     body.custom-cursor, body.custom-cursor * { cursor: none !important; }
-    .sheep-follower, .grass-cursor { position: fixed; z-index: 30; pointer-events: none; opacity: 0; }
-    .sheep-follower { top: 0; left: 0; width: 126px; height: 90px; transform: translate3d(var(--sheep-x, -180px), var(--sheep-y, -180px), 0) translate(-50%, -50%) scaleX(var(--facing, -1)) rotate(var(--sheep-tilt, 0deg)); transform-origin: 50% 50%; will-change: transform; transition: opacity .15s ease; }
-    .sheep-follower.is-visible, .grass-cursor.is-visible { opacity: 1; }
-    .sheep-follower img { display: block; width: 100%; height: 100%; object-fit: contain; }
+    .grass-cursor { position: fixed; z-index: 30; pointer-events: none; opacity: 0; }
+    .grass-cursor.is-visible { opacity: 1; }
     .grass-cursor { z-index: 31; width: 58px; height: 58px; transform: translate(-50%, -82%); transition: opacity .12s ease; filter: drop-shadow(0 3px 5px rgb(80 230 125 / .24)); }
     .grass-cursor img { display: block; width: 100%; height: 100%; object-fit: contain; }
 
@@ -263,7 +261,6 @@
     @keyframes scan { 0%, 100% { opacity: .14; } 24%, 56%, 78% { opacity: .52; } }
     @keyframes page-in { to { opacity: 1; transform: none; } }
     @media (max-width: 480px) {
-      .sheep-follower { width: 106px; height: 74px; }
       .grass-cursor { width: 52px; height: 52px; }
       .page { padding-top: 94px; padding-bottom: 60px; }
       .page-nav { top: 24px; }
@@ -292,7 +289,7 @@
     <span class="glitch-field" aria-hidden="true"></span>
     <span class="scanlines" aria-hidden="true"></span>
   </div>
-  <audio id="sheep-sound" preload="auto">
+  <audio id="sheep-sound" preload="auto" playsinline>
     <source src="sheep-bleat.ogg" type="audio/ogg">
   </audio>
 
@@ -346,9 +343,6 @@
     </section>
   </main>
 
-  <div class="sheep-follower" id="sheep-follower" aria-hidden="true">
-    <img src="cursor-sheep-cutout.png" alt="">
-  </div>
   <div class="grass-cursor" id="grass-cursor" aria-hidden="true">
     <img src="cursor-grass-cutout.png" alt="">
   </div>
@@ -359,15 +353,13 @@
       const page = document.getElementById('page');
       const sheepSound = document.getElementById('sheep-sound');
       let finished = false;
-      let soundPlayed = false;
       let finishTimer;
 
       function playSheepSound() {
-        if (soundPlayed) return;
         sheepSound.currentTime = 0;
         sheepSound.volume = 0.72;
         const playback = sheepSound.play();
-        if (playback) playback.then(() => { soundPlayed = true; }).catch(() => {});
+        if (playback) playback.catch(() => {});
       }
 
       function finish() {
@@ -380,121 +372,40 @@
         window.setTimeout(() => { intro.hidden = true; }, 580);
       }
 
-      document.addEventListener('pointerdown', () => { if (finished && !soundPlayed) playSheepSound(); }, { passive: true });
-      document.addEventListener('keydown', () => { if (finished && !soundPlayed) playSheepSound(); });
       if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) finish();
       else finishTimer = window.setTimeout(finish, 2850);
     })();
 
     (() => {
-      const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-
       const intro = document.getElementById('intro');
-      const sheep = document.getElementById('sheep-follower');
       const grass = document.getElementById('grass-cursor');
       const state = {
         active: false,
         source: '',
-        pointer: null,
         lastPointer: null,
-        x: 0,
-        y: 0,
-        directionX: 1,
-        directionY: 0,
-        scrollNudge: 0,
-        lastFrame: 0,
-        frame: 0,
         hideTimer: 0,
-        nudgeTimer: 0,
         touchStart: null,
         scrollY: window.scrollY
       };
 
-      function desiredPosition() {
-        const mobile = window.matchMedia('(max-width: 480px)').matches;
-        const halfWidth = (mobile ? 106 : 126) / 2 + 8;
-        const halfHeight = (mobile ? 74 : 90) / 2 + 8;
-        return {
-          x: Math.max(halfWidth, Math.min(window.innerWidth - halfWidth, state.pointer.x - state.directionX * (mobile ? 52 : 68))),
-          y: Math.max(halfHeight, Math.min(window.innerHeight - halfHeight, state.pointer.y - state.directionY * (mobile ? 25 : 32) + 8 + state.scrollNudge))
-        };
-      }
-
-      function scheduleFrame() {
-        if (!state.frame) state.frame = window.requestAnimationFrame(moveSheep);
-      }
-
-      function moveSheep(timestamp) {
-        state.frame = 0;
-        if (!state.active || !state.pointer) return;
-        const target = desiredPosition();
-        const elapsed = state.lastFrame ? Math.min(50, timestamp - state.lastFrame) : 16;
-        state.lastFrame = timestamp;
-        const ease = reducedMotion ? 1 : 1 - Math.exp(-elapsed / 90);
-        state.x += (target.x - state.x) * ease;
-        state.y += (target.y - state.y) * ease;
-        state.scrollNudge = reducedMotion ? 0 : state.scrollNudge * Math.exp(-elapsed / 190);
-        sheep.style.setProperty('--sheep-x', `${state.x}px`);
-        sheep.style.setProperty('--sheep-y', `${state.y}px`);
-        const dx = state.pointer.x - state.x;
-        const dy = state.pointer.y - state.y;
-        const facing = dx >= 0 ? -1 : 1;
-        const tilt = `${Math.max(-10, Math.min(10, dy / (Math.hypot(dx, dy) || 1) * 12))}deg`;
-        sheep.style.setProperty('--facing', facing);
-        sheep.style.setProperty('--sheep-tilt', tilt);
-        if (Math.abs(target.x - state.x) > .25 || Math.abs(target.y - state.y) > .25 || Math.abs(state.scrollNudge) > .25) scheduleFrame();
-      }
-
-      function hideFollower() {
+      function hideGrass() {
         state.active = false;
         state.source = '';
-        state.pointer = null;
-        state.lastPointer = null;
-        state.directionX = 1;
-        state.directionY = 0;
-        state.scrollNudge = 0;
-        state.lastFrame = 0;
         window.clearTimeout(state.hideTimer);
-        window.clearTimeout(state.nudgeTimer);
-        if (state.frame) window.cancelAnimationFrame(state.frame);
-        state.frame = 0;
-        sheep.classList.remove('is-visible');
         grass.classList.remove('is-visible');
         document.body.classList.remove('custom-cursor');
       }
 
-      function setPointer(x, y, source) {
+      function showGrass(x, y, source) {
         if (!intro.hidden) return;
         window.clearTimeout(state.hideTimer);
-        const firstAppearance = !state.active;
-        if (state.pointer) {
-          const dx = x - state.pointer.x;
-          const dy = y - state.pointer.y;
-          const distance = Math.hypot(dx, dy);
-          if (distance > 2) {
-            const blend = distance > 18 ? .4 : .18;
-            state.directionX = state.directionX * (1 - blend) + (dx / distance) * blend;
-            state.directionY = state.directionY * (1 - blend) + (dy / distance) * blend;
-            const length = Math.hypot(state.directionX, state.directionY) || 1;
-            state.directionX /= length;
-            state.directionY /= length;
-          }
-        }
-        state.pointer = { x, y };
         state.lastPointer = { x, y };
         state.source = source;
         state.active = true;
-        if (firstAppearance) {
-          const target = desiredPosition();
-          state.x = target.x;
-          state.y = target.y;
-        }
-        sheep.classList.add('is-visible');
         grass.classList.add('is-visible');
         document.body.classList.toggle('custom-cursor', source === 'mouse');
         grass.style.left = `${x}px`;
         grass.style.top = `${y}px`;
-        scheduleFrame();
       }
 
       document.addEventListener('pointermove', event => {
@@ -505,20 +416,20 @@
           }
           return;
         }
-        setPointer(event.clientX, event.clientY, event.pointerType);
+        showGrass(event.clientX, event.clientY, event.pointerType);
         if (event.pointerType === 'touch') {
-          state.hideTimer = window.setTimeout(hideFollower, 1300);
+          state.hideTimer = window.setTimeout(hideGrass, 1300);
         }
       }, { passive: true });
 
       document.addEventListener('pointerdown', event => {
         if (!event.isPrimary || !['mouse', 'pen', 'touch'].includes(event.pointerType)) return;
         if (event.pointerType === 'touch' && window.matchMedia('(max-width: 480px)').matches) {
-          hideFollower();
+          hideGrass();
           state.touchStart = { x: event.clientX, y: event.clientY, moved: false };
           return;
         }
-        setPointer(event.clientX, event.clientY, event.pointerType);
+        showGrass(event.clientX, event.clientY, event.pointerType);
       }, { passive: true });
 
       document.addEventListener('pointerup', event => {
@@ -527,50 +438,43 @@
           const tap = state.touchStart;
           state.touchStart = null;
           if (!tap || tap.moved) return;
-          setPointer(tap.x, tap.y, 'touch');
-          state.hideTimer = window.setTimeout(hideFollower, 1100);
+          showGrass(tap.x, tap.y, 'touch');
+          state.hideTimer = window.setTimeout(hideGrass, 1100);
           return;
         }
-        state.hideTimer = window.setTimeout(hideFollower, 1100);
+        state.hideTimer = window.setTimeout(hideGrass, 1100);
       }, { passive: true });
       document.addEventListener('pointercancel', event => {
         if (event.pointerType === 'touch') {
           state.touchStart = null;
-          hideFollower();
+          hideGrass();
         }
       }, { passive: true });
       window.addEventListener('wheel', event => {
-        setPointer(event.clientX, event.clientY, 'mouse');
+        showGrass(event.clientX, event.clientY, 'mouse');
       }, { passive: true });
       document.addEventListener('pointerleave', event => {
-        if (event.pointerType === 'mouse' || event.pointerType === 'pen') hideFollower();
+        if (event.pointerType === 'mouse' || event.pointerType === 'pen') hideGrass();
       }, { passive: true });
-      window.addEventListener('blur', hideFollower);
+      window.addEventListener('blur', hideGrass);
 
       window.addEventListener('scroll', () => {
         const scrollY = window.scrollY;
         const direction = Math.sign(scrollY - state.scrollY);
         state.scrollY = scrollY;
         if (window.matchMedia('(max-width: 480px)').matches) {
-          hideFollower();
+          hideGrass();
           return;
         }
         if (!direction) return;
         if (!state.active) {
           const anchor = state.lastPointer || { x: window.innerWidth / 2, y: window.innerHeight * .55 };
-          setPointer(anchor.x, anchor.y, 'scroll');
+          showGrass(anchor.x, anchor.y, 'scroll');
         }
-        state.scrollNudge = Math.max(-24, Math.min(24, state.scrollNudge - direction * 19));
-        scheduleFrame();
         if (state.source !== 'mouse' && state.source !== 'pen') {
           window.clearTimeout(state.hideTimer);
-          state.hideTimer = window.setTimeout(hideFollower, 1100);
+          state.hideTimer = window.setTimeout(hideGrass, 1100);
         }
-        window.clearTimeout(state.nudgeTimer);
-        state.nudgeTimer = window.setTimeout(() => {
-          state.scrollNudge = 0;
-          scheduleFrame();
-        }, 180);
       }, { passive: true });
     })();
   </script>
